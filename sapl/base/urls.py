@@ -217,7 +217,7 @@ urlpatterns = [
     url(r'^(sapl/)?sapl_documentos/props_sapl/logo_casa',
         LogotipoView.as_view(), name='logotipo'),
 
-    url(r'^sessao/lista-branca/',
+    url(r'^sistema/lista-branca/',
         include(ListaBrancaVotacaoCrud.get_urls()))
 
 ] + recuperar_senha + alterar_senha + admin_user + channels_url
