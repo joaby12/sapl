@@ -40,7 +40,8 @@ from .views import (AlterarSenha, AppConfigCrud, CasaLegislativaCrud,
                     ListarParlFiliacoesIntersecaoView,
                     ListarAutoresDuplicadosView,
                     ListarBancadaComissaoAutorExternoView,
-                    ListarLegislaturaInfindavelView)
+                    ListarLegislaturaInfindavelView,
+                    ListaBrancaVotacaoCrud)
 
 
 app_name = AppConfig.name
@@ -216,5 +217,7 @@ urlpatterns = [
     url(r'^(sapl/)?sapl_documentos/props_sapl/logo_casa',
         LogotipoView.as_view(), name='logotipo'),
 
+    url(r'^sessao/lista-branca/',
+        include(ListaBrancaVotacaoCrud.get_urls()))
 
 ] + recuperar_senha + alterar_senha + admin_user + channels_url

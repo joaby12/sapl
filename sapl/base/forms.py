@@ -38,7 +38,7 @@ from sapl.utils import (RANGE_ANOS, YES_NO_CHOICES,
                         models_with_gr_for_model, qs_override_django_filter,
                         choice_anos_com_normas, choice_anos_com_materias,
                         FilterOverridesMetaMixin, FileFieldCheckMixin)
-from .models import AppConfig, CasaLegislativa
+from .models import AppConfig, CasaLegislativa, ListaBrancaVotacao
 
 
 ACTION_CREATE_USERS_AUTOR_CHOICE = [
@@ -1423,3 +1423,33 @@ class PartidoForm(FileFieldCheckMixin, ModelForm):
                 raise ValidationError("Certifique-se de que a data de criação seja anterior à data de extinção.")
 
         return cleaned_data
+
+
+class ListaBrancaVotacaoForm(ModelForm):
+    class Meta:
+        model = ListaBrancaVotacao
+        exclude = ['data_hora']
+
+    def __init__(self, *args, **kwargs):
+
+        super().__init__(*args, **kwargs)
+
+        self.fields['user'].initial = self.initial['user']
+
+        row0 = to_row([('ip', 6),
+                       ('user', 6)])
+
+        self.helper = SaplFormHelper()
+        self.helper.layout = Layout(
+            row0,
+            form_actions(label='Confirmar')) 
+
+    def clean(self):
+        super(ListaBrancaVotacaoForm, self).clean()
+
+        if not self.is_valid():
+            return self.cleaned_data
+
+        data = self.cleaned_data
+        data['user'] = self.initial['user']
+        return data

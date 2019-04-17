@@ -50,3 +50,11 @@ Autor:
 AutorCreate:
   {% trans 'Cadastro de Usuários Autores' %}:
   - tipo:3 search_autor
+
+ListaBrancaVotacao:
+  {% trans 'Cadastro de novo ip' %}:
+  - ip
+
+ListaBrancaVotacaoDetail:
+  {% trans 'IP da Lista Branca' %}:
+  - ip:8 user:4

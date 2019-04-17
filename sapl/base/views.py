@@ -60,8 +60,9 @@ from .forms import (AlterarSenhaForm, CasaLegislativaForm,
                     RelatorioReuniaoFilterSet, UsuarioCreateForm,
                     UsuarioEditForm, RelatorioNormasMesFilterSet,
                     RelatorioNormasVigenciaFilterSet,
-                    EstatisticasAcessoNormasForm, UsuarioFilterSet)
-from .models import AppConfig, CasaLegislativa
+                    EstatisticasAcessoNormasForm, UsuarioFilterSet,
+                    ListaBrancaVotacaoForm)
+from .models import AppConfig, CasaLegislativa, ListaBrancaVotacao
 
 
 def chanel_index(request):
@@ -1778,3 +1779,39 @@ class LogotipoView(RedirectView):
         casa = get_casalegislativa()
         logo = casa and casa.logotipo and casa.logotipo.name
         return os.path.join(settings.MEDIA_URL, logo) if logo else STATIC_LOGO
+
+
+class ListaBrancaVotacaoCrud(CrudAux):
+    model = ListaBrancaVotacao
+    help_topic = 'lista-branca'
+
+    class BaseMixin(CrudAux.BaseMixin):
+        list_field_names = ['ip', 'user']
+
+    class ListView(CrudAux.ListView):
+        pass
+
+    class UpdateView(CrudAux.UpdateView):
+        layout_key = 'ListaBrancaVotacao'
+        form_class = ListaBrancaVotacaoForm
+
+        def get_initial(self):
+            initial = super(UpdateView, self).get_initial()
+            initial['user'] = self.request.user
+            return initial
+
+    class DetailView(CrudAux.DetailView):
+        layout_key = 'ListaBrancaVotacaoDetail'
+        pass
+
+    class DeleteView(CrudAux.DeleteView):
+        pass
+
+    class CreateView(CrudAux.CreateView):
+        layout_key = 'ListaBrancaVotacao'
+        form_class = ListaBrancaVotacaoForm 
+
+        def get_initial(self):
+            initial = super(CreateView, self).get_initial()
+            initial['user'] = self.request.user
+            return initial

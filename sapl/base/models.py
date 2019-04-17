@@ -261,3 +261,28 @@ class Autor(models.Model):
         if self.user:
             return str(self.user.username)
         return '?'
+
+
+class ListaBrancaVotacao(models.Model):
+    user = models.ForeignKey(get_settings_auth_user_model(),
+                             on_delete=models.PROTECT,
+                             verbose_name=_('Usuário'),
+                             null=True,
+                             blank=True)
+    ip = models.CharField(primary_key = True,
+                          verbose_name=_('IP'),
+                          max_length=30)
+    data_hora = models.DateTimeField(
+        verbose_name=_('Data/Hora'),
+        auto_now_add=True,
+        blank=True,
+        null=True)
+
+    class Meta:
+        verbose_name = _('Lista Branca para Votação')
+        verbose_name_plural = _('Lista Branca para Votação')
+        ordering = ('ip',)
+        unique_together = (('ip',),)
+
+    def __str__(self):
+        return self.ip
