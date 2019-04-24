@@ -617,7 +617,7 @@ def test_numeracao_materia_legislativa_por_ano(admin_client):
 
     # Cria uma materia
     tipo_materia = mommy.make(TipoMateriaLegislativa,
-                              id=1, sequencia_numeracao='A')
+                              id=1, sequencia_numeracao ='A')
     materia = mommy.make(MateriaLegislativa,
                          tipo=tipo_materia,
                          ano=2017,
@@ -814,3 +814,45 @@ def test_tramitacoes_materias_anexadas(admin_client):
     response = admin_client.post(url, {'confirmar':'confirmar'} ,follow=True)
     assert Tramitacao.objects.filter(id=tramitacao_anexada.pk).count() == 0
     assert Tramitacao.objects.filter(id=tramitacao_anexada_anexada.pk).count() == 0
+
+
+def test_recebimento_proposicao(admin_client):
+    tipo_autor = mommy.make(TipoAutor, descricao='Teste Tipo_Autor')
+    user = get_user_model().objects.filter(is_active=True)[0]
+
+    autor = mommy.make(
+        Autor,
+        user=user,
+        tipo=tipo_autor,
+        nome='Autor Teste')
+
+    file_content = 'file_content'
+    texto = SimpleUploadedFile("file.txt", file_content.encode('UTF-8'))
+
+    mcts = ContentType.objects.get_for_models(
+        *models_with_gr_for_model(TipoProposicao))
+
+    for pk, mct in enumerate(mcts):
+        tipo_conteudo_related = mommy.make(mct, pk=pk + 1)
+
+        response = admin_client.post(
+        reverse('sapl.materia:proposicao_create'),
+            {'tipo': mommy.make(
+                TipoProposicao, pk=3,
+                tipo_conteudo_related=tipo_conteudo_related).pk,
+                'descricao': 'Teste proposição',
+                'justificativa_devolucao': '  ',
+                'status': 'E',
+                'autor': autor.pk,
+                'texto_original': texto,
+                'salvar': 'salvar',
+                'receber_recibo': 'True',
+           },
+           follow=True)
+
+        assert response.status_code == 200
+
+        proposicao = Proposicao.objects.first()
+
+        import ipdb; ipdb.set_trace()
+        pass
