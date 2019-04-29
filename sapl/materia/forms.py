@@ -1572,7 +1572,6 @@ class ProposicaoForm(FileFieldCheckMixin, forms.ModelForm):
                   'observacao',
                   'texto_original',
                   'materia_de_vinculo',
-
                   'tipo_materia',
                   'numero_materia',
                   'ano_materia',

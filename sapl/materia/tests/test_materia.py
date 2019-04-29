@@ -1,11 +1,13 @@
 from datetime import date
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.core.files.base import File
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.urlresolvers import reverse
 from django.db.models import Max
+from django.utils.translation import ugettext_lazy as _
 from model_mommy import mommy
-import pytest
+import datetime, pytest, os
 
 from sapl.base.models import Autor, TipoAutor
 from sapl.comissoes.models import Comissao, TipoComissao
@@ -20,7 +22,8 @@ from sapl.materia.forms import (TramitacaoForm, compara_tramitacoes_mat,
 from sapl.norma.models import (LegislacaoCitada, NormaJuridica,
                                TipoNormaJuridica)
 from sapl.parlamentares.models import Legislatura
-from sapl.utils import models_with_gr_for_model, lista_anexados
+from sapl.utils import (models_with_gr_for_model, lista_anexados,
+                        gerar_hash_arquivo,SEPARADOR_HASH_PROPOSICAO)
 
 
 @pytest.mark.django_db(transaction=False)
@@ -641,6 +644,144 @@ def test_numeracao_materia_legislativa_por_ano(admin_client):
     assert response_content['numero'] == esperado_outro_ano['numero']
 
 
+def gerar_hash(prop, receber_recibo=False):
+
+    prop.save()
+    if receber_recibo:
+        prop.hash_code = ''
+    else:
+        if prop.texto_original:
+            prop.hash_code = gerar_hash_arquivo(
+            prop.texto_original.path, str(prop.pk))
+        elif prop.texto_articulado.exists():
+            ta = prop.texto_articulado.first()
+            prop.hash_code = 'P' + ta.hash() + SEPARADOR_HASH_PROPOSICAO + str(prop.pk)
+
+
+def criar_materias(ano, tipo):
+    # Cria alguma materias
+    mommy.make(MateriaLegislativa,
+                tipo=tipo,
+                ano=ano,
+                numero=1
+                )
+    mommy.make(MateriaLegislativa,
+                tipo=tipo,
+                ano=ano,
+                numero=10
+                )
+    mommy.make(MateriaLegislativa,
+                tipo=tipo,
+                ano=ano,
+                numero=5
+                )
+
+def criar_legislaturas(ano_inicio, ano_fim):
+    mommy.make(Legislatura,
+               data_inicio='2014-01-01',
+               data_fim='2018-12-31',
+               numero=20,
+              )
+
+
+def enviar_receber_proposicao(prop, admin_client, numeracao='A'):
+    url = reverse('sapl.materia:proposicao_detail', kwargs={'pk': prop.pk})
+    query_params = '?action=send'
+    response = admin_client.get(url + query_params, follow=True)
+    reverse('sapl.materia:proposicao-confirmar',
+                                kwargs={
+                                    'hash': prop.hash_code.split(SEPARADOR_HASH_PROPOSICAO)[0][1:],
+                                    'pk': prop.pk})
+    results = {
+            'messages': {
+                'success': ['Proposição incorporada com sucesso']
+            },
+            'url': reverse('sapl.materia:receber-proposicao')
+        }
+
+    ano = 2019
+    tipo = prop.tipo.tipo_conteudo_related
+    criar_materias(ano, tipo)
+    #TODO: Testes para cada tipo de numeracao
+    if numeracao == 'A':
+        numero = MateriaLegislativa.objects.filter(
+                    ano=ano, tipo=tipo).aggregate(Max('numero'))
+        assert numero['numero__max'] == 10
+#     elif numeracao == 'L':
+#         legislatura = Legislatura.objects.filter(
+#                 data_inicio__year__lte=ano,
+#                 data_fim__year__gte=ano).first()
+#         data_inicio = legislatura.data_inicio
+#         data_fim = legislatura.data_fim
+#         numero = MateriaLegislativa.objects.filter(
+#                 data_apresentacao__gte=data_inicio,
+#                 data_apresentacao__lte=data_fim,
+#                 tipo=tipo).aggregate(
+#                 Max('numero'))
+#     elif numeracao == 'U':
+#         numero = MateriaLegislativa.objects.filter(
+#                 tipo=tipo).aggregate(Max('numero'))
+    if numeracao is None:
+        numero = {}
+        numero['numero__max'] = 0
+    
+    #TODO: Testes para um numero_materia_futuro definido
+    numero_materia_futuro = None
+    if numero_materia_futuro and not MateriaLegislativa.objects.filter(tipo=tipo,
+                                                                        ano=ano,
+                                                                        numero=numero_materia_futuro):
+        max_numero = numero_materia_futuro
+    else:
+        max_numero = numero['numero__max'] + \
+                1 if numero['numero__max'] else 1
+    
+    data_teste = datetime.datetime(2019, 4, 29, 14, 54, 51)
+    regime_tramitacao = mommy.make(RegimeTramitacao, descricao='Teste_Regime')
+
+    # dados básicos
+    materia = mommy.make(MateriaLegislativa, numero=max_numero, tipo=tipo, ementa=prop.descricao,
+                ano=ano, data_apresentacao=data_teste, em_tramitacao=True,
+                regime_tramitacao = regime_tramitacao)
+
+    if prop.texto_original:
+        arq = File(
+                prop.texto_original,
+                os.path.basename(prop.texto_original.path))
+        materia.texto_original = arq
+
+    #TODO: Testes para texto articulado
+#     if prop.texto_articulado.exists():
+#         ta = prop.texto_articulado.first()
+#         ta_materia = ta.clone_for(materia)
+#         ta_materia.editing_locked = True
+#         ta_materia.privacidade = STATUS_TA_IMMUTABLE_PUBLIC
+#         ta_materia.save()
+
+    results['messages']['success'].append(_(
+        'Matéria Legislativa registrada com sucesso.'))
+
+    # autoria
+    autoria = mommy.make(Autoria, autor=prop.autor, materia=materia, primeiro_autor=True)
+
+    results['messages']['success'].append(_(
+        'Autoria registrada com sucesso'))
+
+    mat_vinc = mommy.make(MateriaLegislativa,
+                tipo=tipo,
+                ano=ano,
+                numero=4
+                )
+
+    prop.materia_de_vinculo = mat_vinc
+    # Testar matéria de vinculo
+    anexada = mommy.make(Anexada, materia_principal=prop.materia_de_vinculo, 
+                        materia_anexada=materia, data_anexacao=data_teste)
+
+    results['messages']['success'].append(_('Matéria anexada com sucesso'))
+    
+    return results
+
+
 @pytest.mark.django_db(transaction=False)
 def test_tramitacoes_materias_anexadas(admin_client):
     tipo_materia = mommy.make(
@@ -827,7 +968,7 @@ def test_recebimento_proposicao(admin_client):
         nome='Autor Teste')
 
     file_content = 'file_content'
-    texto = SimpleUploadedFile("file.txt", file_content.encode('UTF-8'))
+    texto = SimpleUploadedFile("resources/test.pdf", file_content.encode('UTF-8'))
 
     mcts = ContentType.objects.get_for_models(
         *models_with_gr_for_model(TipoProposicao))
@@ -853,6 +994,9 @@ def test_recebimento_proposicao(admin_client):
         assert response.status_code == 200
 
         proposicao = Proposicao.objects.first()
+        gerar_hash(proposicao)
+
+        results = enviar_receber_proposicao(proposicao, admin_client)
 
         import ipdb; ipdb.set_trace()
         pass
