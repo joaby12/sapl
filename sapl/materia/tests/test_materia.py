@@ -687,11 +687,25 @@ def criar_legislaturas(ano_inicio, ano_fim):
 def enviar_receber_proposicao(prop, admin_client, numeracao='A'):
     url = reverse('sapl.materia:proposicao_detail', kwargs={'pk': prop.pk})
     query_params = '?action=send'
-    response = admin_client.get(url + query_params, follow=True)
-    reverse('sapl.materia:proposicao-confirmar',
+    response_detail = admin_client.get(url + query_params, follow=True)
+
+    assert response_detail.status_code == 200
+
+    url2 = reverse('sapl.materia:proposicao-confirmar',
                                 kwargs={
                                     'hash': prop.hash_code.split(SEPARADOR_HASH_PROPOSICAO)[0][1:],
                                     'pk': prop.pk})
+    response_confirmar = admin_client.get(url2, follow=True)
+
+    assert response_confirmar.status_code == 200
+
+    response_receber = admin_client.post(reverse('sapl.materia:receber-proposicao'),
+                                        {'cod_hash': prop.hash_code.split(SEPARADOR_HASH_PROPOSICAO)[0][1:]+'a'}, 
+                                        follow=True)
+
+    import ipdb; ipdb.set_trace()
+    assert not response_receber.context_data['form'].errors
+
     results = {
             'messages': {
                 'success': ['Proposição incorporada com sucesso']
@@ -701,83 +715,88 @@ def enviar_receber_proposicao(prop, admin_client, numeracao='A'):
 
     ano = 2019
     tipo = prop.tipo.tipo_conteudo_related
-    criar_materias(ano, tipo)
-    #TODO: Testes para cada tipo de numeracao
-    if numeracao == 'A':
-        numero = MateriaLegislativa.objects.filter(
-                    ano=ano, tipo=tipo).aggregate(Max('numero'))
-        assert numero['numero__max'] == 10
-#     elif numeracao == 'L':
-#         legislatura = Legislatura.objects.filter(
-#                 data_inicio__year__lte=ano,
-#                 data_fim__year__gte=ano).first()
-#         data_inicio = legislatura.data_inicio
-#         data_fim = legislatura.data_fim
-#         numero = MateriaLegislativa.objects.filter(
-#                 data_apresentacao__gte=data_inicio,
-#                 data_apresentacao__lte=data_fim,
-#                 tipo=tipo).aggregate(
-#                 Max('numero'))
-#     elif numeracao == 'U':
-#         numero = MateriaLegislativa.objects.filter(
-#                 tipo=tipo).aggregate(Max('numero'))
-    if numeracao is None:
-        numero = {}
-        numero['numero__max'] = 0
-    
-    #TODO: Testes para um numero_materia_futuro definido
-    numero_materia_futuro = None
-    if numero_materia_futuro and not MateriaLegislativa.objects.filter(tipo=tipo,
-                                                                        ano=ano,
-                                                                        numero=numero_materia_futuro):
-        max_numero = numero_materia_futuro
-    else:
-        max_numero = numero['numero__max'] + \
-                1 if numero['numero__max'] else 1
-    
-    data_teste = datetime.datetime(2019, 4, 29, 14, 54, 51)
-    regime_tramitacao = mommy.make(RegimeTramitacao, descricao='Teste_Regime')
+    if prop.tipo.content_type.model_class(
+        ) == TipoMateriaLegislativa:
+        criar_materias(ano, tipo)
 
-    # dados básicos
-    materia = mommy.make(MateriaLegislativa, numero=max_numero, tipo=tipo, ementa=prop.descricao,
-                ano=ano, data_apresentacao=data_teste, em_tramitacao=True,
-                regime_tramitacao = regime_tramitacao)
+        if tipo.sequencia_numeracao:
+                numeracao = tipo.sequencia_numeracao
+        #TODO: Testes para cada tipo de numeracao
+        if numeracao == 'A':
+                numero = MateriaLegislativa.objects.filter(
+                        ano=ano, tipo=tipo).aggregate(Max('numero'))
+                assert numero['numero__max'] == 10
+        #     elif numeracao == 'L':
+        #         legislatura = Legislatura.objects.filter(
+        #                 data_inicio__year__lte=ano,
+        #                 data_fim__year__gte=ano).first()
+        #         data_inicio = legislatura.data_inicio
+        #         data_fim = legislatura.data_fim
+        #         numero = MateriaLegislativa.objects.filter(
+        #                 data_apresentacao__gte=data_inicio,
+        #                 data_apresentacao__lte=data_fim,
+        #                 tipo=tipo).aggregate(
+        #                 Max('numero'))
+        #     elif numeracao == 'U':
+        #         numero = MateriaLegislativa.objects.filter(
+        #                 tipo=tipo).aggregate(Max('numero'))
+        if numeracao is None:
+                numero = {}
+                numero['numero__max'] = 0
+        
+        #TODO: Testes para um numero_materia_futuro definido
+        numero_materia_futuro = None
+        if numero_materia_futuro and not MateriaLegislativa.objects.filter(tipo=tipo,
+                                                                                ano=ano,
+                                                                                numero=numero_materia_futuro):
+                max_numero = numero_materia_futuro
+        else:
+                max_numero = numero['numero__max'] + \
+                        1 if numero['numero__max'] else 1
+        
+        data_teste = datetime.datetime(2019, 4, 29, 14, 54, 51)
+        regime_tramitacao = mommy.make(RegimeTramitacao, descricao='Teste_Regime')
 
-    if prop.texto_original:
-        arq = File(
-                prop.texto_original,
-                os.path.basename(prop.texto_original.path))
-        materia.texto_original = arq
+        # dados básicos
+        materia = mommy.make(MateriaLegislativa, numero=max_numero, tipo=tipo, ementa=prop.descricao,
+                        ano=ano, data_apresentacao=data_teste, em_tramitacao=True,
+                        regime_tramitacao = regime_tramitacao)
 
-    #TODO: Testes para texto articulado
-#     if prop.texto_articulado.exists():
-#         ta = prop.texto_articulado.first()
-#         ta_materia = ta.clone_for(materia)
-#         ta_materia.editing_locked = True
-#         ta_materia.privacidade = STATUS_TA_IMMUTABLE_PUBLIC
-#         ta_materia.save()
+        if prop.texto_original:
+                arq = File(
+                        prop.texto_original,
+                        os.path.basename(prop.texto_original.path))
+                materia.texto_original = arq
 
-    results['messages']['success'].append(_(
-        'Matéria Legislativa registrada com sucesso.'))
+        #TODO: Testes para texto articulado
+        #     if prop.texto_articulado.exists():
+        #         ta = prop.texto_articulado.first()
+        #         ta_materia = ta.clone_for(materia)
+        #         ta_materia.editing_locked = True
+        #         ta_materia.privacidade = STATUS_TA_IMMUTABLE_PUBLIC
+        #         ta_materia.save()
 
-    # autoria
-    autoria = mommy.make(Autoria, autor=prop.autor, materia=materia, primeiro_autor=True)
+        results['messages']['success'].append(_(
+                'Matéria Legislativa registrada com sucesso.'))
 
-    results['messages']['success'].append(_(
-        'Autoria registrada com sucesso'))
+        # autoria
+        autoria = mommy.make(Autoria, autor=prop.autor, materia=materia, primeiro_autor=True)
 
-    mat_vinc = mommy.make(MateriaLegislativa,
-                tipo=tipo,
-                ano=ano,
-                numero=4
-                )
+        results['messages']['success'].append(_(
+                'Autoria registrada com sucesso'))
 
-    prop.materia_de_vinculo = mat_vinc
-    # Testar matéria de vinculo
-    anexada = mommy.make(Anexada, materia_principal=prop.materia_de_vinculo, 
-                        materia_anexada=materia, data_anexacao=data_teste)
+        mat_vinc = mommy.make(MateriaLegislativa,
+                        tipo=tipo,
+                        ano=ano,
+                        numero=4
+                        )
 
-    results['messages']['success'].append(_('Matéria anexada com sucesso'))
+        prop.materia_de_vinculo = mat_vinc
+        # Testar matéria de vinculo
+        anexada = mommy.make(Anexada, materia_principal=prop.materia_de_vinculo, 
+                                materia_anexada=materia, data_anexacao=data_teste)
+
+        results['messages']['success'].append(_('Matéria anexada com sucesso'))
     
     return results
 
@@ -998,5 +1017,4 @@ def test_recebimento_proposicao(admin_client):
 
         results = enviar_receber_proposicao(proposicao, admin_client)
 
-        import ipdb; ipdb.set_trace()
         pass

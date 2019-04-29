@@ -122,6 +122,8 @@ class ReceberProposicaoForm(Form):
         )
         super(ReceberProposicaoForm, self).__init__(*args, **kwargs)
 
+    #TODO: validação do código hash
+
 
 class MateriaSimplificadaForm(FileFieldCheckMixin, ModelForm):
 
