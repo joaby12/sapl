@@ -703,7 +703,7 @@ def enviar_receber_proposicao(prop, admin_client, numeracao='A'):
                                         {'cod_hash': prop.hash_code.split(SEPARADOR_HASH_PROPOSICAO)[0][1:]+'a'}, 
                                         follow=True)
 
-    import ipdb; ipdb.set_trace()
+#     import ipdb; ipdb.set_trace()
     assert not response_receber.context_data['form'].errors
 
     results = {
