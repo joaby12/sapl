@@ -7,9 +7,10 @@ from django.core.urlresolvers import reverse
 from django.db.models import Max
 from django.utils.translation import ugettext_lazy as _
 from model_mommy import mommy
+from django.test import Client
 import datetime, pytest, os
 
-from sapl.base.models import Autor, TipoAutor
+from sapl.base.models import Autor, TipoAutor, AppConfig
 from sapl.comissoes.models import Comissao, TipoComissao
 from sapl.materia.models import (Anexada, Autoria, DespachoInicial,
                                  DocumentoAcessorio, MateriaLegislativa,
@@ -885,6 +886,7 @@ def enviar_receber_proposicao(prop, admin_client, numeracao='A'):
 
     criar_materias(ano, tipo)
 
+    prop.ano=2023
     regime_tramitacao = mommy.make(RegimeTramitacao, descricao='Teste_Regime')
     r = admin_client.post(url2, {'incorporar':'incorporar', 
                                 'regime_tramitacao':regime_tramitacao.pk, 
@@ -1002,7 +1004,7 @@ def enviar_receber_proposicao(prop, admin_client, numeracao='A'):
     
 #     return results
 
-
+@pytest.mark.django_db(transaction=False)
 def test_recebimento_proposicao(admin_client):
     tipo_autor = mommy.make(TipoAutor, descricao='Teste Tipo_Autor')
     user = get_user_model().objects.filter(is_active=True)[0]
@@ -1014,7 +1016,10 @@ def test_recebimento_proposicao(admin_client):
         nome='Autor Teste')
 
     tipo_autor2 = mommy.make(TipoAutor, descricao='Teste Tipo_Autor 2')
-    user2 = get_user_model().objects.create(username='admin2', is_superuser=True)
+    user2 = get_user_model().objects.create(username='admin2', 
+                                            password='12345',
+                                            is_superuser=True, 
+                                            is_staff=True)
 
     autor2 = mommy.make(
         Autor,
@@ -1039,30 +1044,126 @@ def test_recebimento_proposicao(admin_client):
                 tipo_conteudo_related=tipo_conteudo_related)
 
         for aut in [autor, autor2]:
-                mommy.make(Proposicao, tipo=tipo_proposicao, autor=aut, texto_original=texto)
+                for _ in range(3):
+                        mommy.make(Proposicao, tipo=tipo_proposicao, autor=aut, texto_original=texto)
 
-    assert Proposicao.objects.all().count() == 4
+    assert Proposicao.objects.all().count() == 12
 
-    proposicoes = Proposicao.objects.all()
 
-    for p in proposicoes:
+    for p in Proposicao.objects.all():
         gerar_hash(p)
+        p.save()
         assert p.hash_code is not ''
 
+    client2 = Client()
+    client2.force_login(user2)
 
+    proposicoes = Proposicao.objects.all()
     # Envia todas as proposicoes
     for prop in proposicoes:
         url = reverse('sapl.materia:proposicao_detail', kwargs={'pk': prop.pk})
         query_params = '?action=send'
-        response_detail = admin_client.get(url + query_params, follow=True)
+        if prop.autor == autor:
+                response_detail = admin_client.get(url + query_params, follow=True)
+        else:
+                response_detail = client2.get(url + query_params, follow=True)
 
-        import ipdb; ipdb.set_trace()
         assert response_detail.status_code == 200
-
+        
         prop_new = response_detail.context_data['proposicao']
-        prop_new.hash_code = prop.hash_code
-        prop = prop_new
+        p = Proposicao.objects.get(id=prop_new.id)
+        p.data_envio = prop_new.data_envio
+        p.save()
 
-    results = enviar_receber_proposicao(proposicao, admin_client)
+    # Confirma proposicoes
+    for prop in proposicoes:
+        url2 = reverse('sapl.materia:proposicao-confirmar',
+                                        kwargs={
+                                        'hash': prop.hash_code.split(SEPARADOR_HASH_PROPOSICAO)[0][1:],
+                                        'pk': prop.pk})
+        if prop.autor == autor:
+                response_confirmar = admin_client.get(url2, follow=True)
+        else:
+                response_confirmar = client2.get(url2, follow=True)
+
+        assert response_confirmar.status_code == 200
+
+    prop_autor1_mat = []
+    prop_autor1_doc = []
+    prop_autor2_mat = []
+    prop_autor2_doc = []
+    for prop in Proposicao.objects.filter(autor=autor):
+        if prop.tipo.content_type.model_class() == TipoMateriaLegislativa:
+            prop_autor1_mat.append(prop)
+        else:
+            prop_autor1_doc.append(prop)
+    for prop in Proposicao.objects.filter(autor=autor2):
+        if prop.tipo.content_type.model_class() == TipoMateriaLegislativa:
+            prop_autor2_mat.append(prop)
+        else:
+            prop_autor2_doc.append(prop)
+
+    # Materia Legislativa
+    prop = prop_autor1_mat[0]
+    numeracao = 'A'
+    
+    tipo = prop.tipo.tipo_conteudo_related
+
+    mommy.make(MateriaLegislativa,
+                tipo=tipo,
+                ano=2019,
+                numero=1
+                )
+    mommy.make(MateriaLegislativa,
+                tipo=tipo,
+                ano=2019,
+                numero=10
+                )
+    mommy.make(MateriaLegislativa,
+                tipo=tipo,
+                ano=2018,
+                numero=11
+                )
+
+    config = mommy.make(AppConfig, sequencia_numeracao_proposicao="B")
+
+    regime_tramitacao = mommy.make(RegimeTramitacao, descricao='Teste_Regime')
+    url2 = reverse('sapl.materia:proposicao-confirmar',
+                                        kwargs={
+                                        'hash': prop.hash_code.split(SEPARADOR_HASH_PROPOSICAO)[0][1:],
+                                        'pk': prop.pk})
+    r = admin_client.post(url2, {'incorporar':'incorporar', 
+                                'regime_tramitacao':regime_tramitacao.pk, 
+                                'descricao':prop.descricao,
+                                'data_envio': prop.data_envio.date()}, follow=True)
+    assert r.status_code == 200
+
+    materia_criada = r.context_data['materia'].first()
+    protocolo = r.context_data['protocolo']
+
+    assert materia_criada.numero == 11
+
+    prop = prop_autor2_mat[0]
+    url2 = reverse('sapl.materia:proposicao-confirmar',
+                                        kwargs={
+                                        'hash': prop.hash_code.split(SEPARADOR_HASH_PROPOSICAO)[0][1:],
+                                        'pk': prop.pk})
+                                        
+    r = client2.post(url2, {'incorporar':'incorporar', 
+                            'regime_tramitacao':regime_tramitacao.pk, 
+                            'descricao':prop.descricao,
+                            'data_envio': prop.data_envio.date()}, follow=True)
+
+    assert r.status_code == 200
+
+    materia_criada = r.context_data['materia'].first()
+    protocolo = r.context_data['protocolo']
+
+    import ipdb; ipdb.set_trace()
+
+    assert materia_criada.numero == 12
+
+
+#     results = enviar_receber_proposicao(proposicao, admin_client)
 
     pass
