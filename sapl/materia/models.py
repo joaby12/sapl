@@ -15,7 +15,6 @@ from sapl.comissoes.models import Comissao, Reuniao
 from sapl.compilacao.models import (PerfilEstruturalTextoArticulado,
                                     TextoArticulado)
 from sapl.parlamentares.models import Parlamentar
-#from sapl.protocoloadm.models import Protocolo
 from sapl.utils import (RANGE_ANOS, YES_NO_CHOICES, SaplGenericForeignKey,
                         SaplGenericRelation, restringe_tipos_de_arquivo_txt,
                         texto_upload_path, get_settings_auth_user_model)
@@ -1060,3 +1059,35 @@ class Tramitacao(models.Model):
             'materia': self.materia,
             'status': self.status,
             'data': self.data_tramitacao.strftime("%d/%m/%Y")}
+
+
+class ProtocoloMateria(models.Model):
+    from django.contrib.postgres.fields import ArrayField
+
+    numero_protocolo = models.PositiveIntegerField()
+    ano_protocolo = models.PositiveIntegerField()
+    total = models.PositiveIntegerField()
+    materias = ArrayField(models.PositiveIntegerField())
+
+    class Meta:
+        managed = False
+        db_table = "materia_protocolomateria"
+
+    def __str__(self):
+        return '{}/{}'.format(self.numero_protocolo, self.ano_protocolo)
+
+
+class MateriaProtocolo(models.Model):
+
+    materia = models.ForeignKey(MateriaLegislativa)
+    numero_materia = models.PositiveIntegerField()
+    ano_materia = models.PositiveIntegerField()
+    numero_protocolo = models.PositiveIntegerField()
+    ano_protocolo = models.PositiveIntegerField()
+
+    class Meta:
+        managed = False
+        db_table = "materia_materiaprotocolo"
+
+    def __str__(self):
+        return '{}/{}'.format(self.numero_materia, self.ano_materia)

@@ -36,7 +36,8 @@ from sapl.base.models import Autor, TipoAutor
 from sapl.comissoes.models import Reuniao, Comissao
 from sapl.crud.base import CrudAux, make_pagination
 from sapl.materia.models import (Autoria, MateriaLegislativa, Proposicao,
-                                 TipoMateriaLegislativa, StatusTramitacao, UnidadeTramitacao)
+                                 TipoMateriaLegislativa, StatusTramitacao, UnidadeTramitacao, MateriaProtocolo,
+                                 ProtocoloMateria)
 from sapl.norma.models import (NormaJuridica, NormaEstatisticas)
 from sapl.parlamentares.models import Parlamentar, Legislatura, Mandato, Filiacao
 from sapl.protocoloadm.models import (Protocolo, TipoDocumentoAdministrativo, 
@@ -1332,14 +1333,11 @@ class ListarFiliacoesSemDataFiliacaoView(PermissionRequiredMixin, ListView):
 
 
 def materias_protocolo_inexistente():
-    materias = []
-    for materia in MateriaLegislativa.objects.filter(numero_protocolo__isnull=False).order_by('-ano', 'numero'):
-        exists = Protocolo.objects.filter(
-            ano=materia.ano, numero=materia.numero_protocolo).exists()
-        if not exists:
-            materias.append(
-                (materia, materia.ano, materia.numero_protocolo))
-    return materias
+    return [(m.materia, m.materia.ano, m.materia.numero_protocolo) for m in
+            MateriaProtocolo.objects\
+                .select_related('materia').all()\
+                .order_by('-ano_materia', 'numero_materia')]
+
 
 
 class ListarMatProtocoloInexistenteView(PermissionRequiredMixin, ListView):
@@ -1368,15 +1366,12 @@ class ListarMatProtocoloInexistenteView(PermissionRequiredMixin, ListView):
 
 def protocolos_com_materias():
     protocolos = {}
-    
-    for m in MateriaLegislativa.objects.filter(numero_protocolo__isnull=False).order_by('-ano', 'numero_protocolo'):
-        if Protocolo.objects.filter(numero=m.numero_protocolo, ano=m.ano).exists():
-            key = "{}/{}".format(m.numero_protocolo, m.ano)
-            val = protocolos.get(key, list())
-            val.append(m)
-            protocolos[key] = val
-    
-    return [(v[0], len(v)) for (k, v) in protocolos.items() if len(v) > 1]
+
+    for p in ProtocoloMateria.objects.filter(total__gt=1):
+        key = "{}/{}".format(p.numero_protocolo, p.ano_protocolo)
+        protocolos[key] = list(MateriaLegislativa.objects.filter(id__in=p.materias))
+
+    return [(v[0], len(v)) for (k, v) in protocolos.items()]
 
 
 class ListarProtocolosComMateriasView(PermissionRequiredMixin, ListView):
