@@ -1,6 +1,6 @@
 import sapl
 
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.core.urlresolvers import reverse
 from django.views.decorators.clickjacking import xframe_options_exempt
 from django.views.generic import UpdateView
@@ -8,7 +8,8 @@ from sapl.crud.base import RP_DETAIL, RP_LIST, Crud, MasterDetailCrud
 
 from .forms import AudienciaForm, AnexoAudienciaPublicaForm
 from .models import AudienciaPublica, AnexoAudienciaPublica
-
+from sapl.parlamentares.models import Parlamentar
+from sapl.materia.models import MateriaLegislativa
 
 def index(request):
     return HttpResponse("Audiência  Pública")
@@ -20,7 +21,7 @@ class AudienciaCrud(Crud):
 
     class BaseMixin(Crud.BaseMixin):
         list_field_names = ['numero', 'nome', 'tipo', 'materia',
-                            'data'] 
+                            'data', 'parlamentar', 'requerimento']
         ordering = '-data', 'nome', 'numero', 'tipo'
 
     class ListView(Crud.ListView):
@@ -107,3 +108,13 @@ class AnexoAudienciaPublicaCrud(MasterDetailCrud):
 
     class DetailView(AudienciaPublicaMixin, MasterDetailCrud.DetailView):
         pass
+
+
+def busca_requerimento_por_parlamentar(request):
+    parlamentar_id = request.GET.get('parlamentar_id')
+    parlamentar = Parlamentar.objects.get(id=parlamentar_id)
+    requerimentos = MateriaLegislativa.objects.filter(tipo__descricao='Requerimento', autores=parlamentar.autor.all())
+    requerimentos_result = []
+    for requerimento in requerimentos:
+        requerimentos_result.append({'requerimento_id': requerimento.id, 'requerimento_text': requerimento.__str__()})
+    return JsonResponse({'result': requerimentos_result})

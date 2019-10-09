@@ -10,6 +10,8 @@ AudienciaPublica:
   - upload_pauta upload_ata upload_anexo
   - observacao
   - audiencia_cancelada
+  - parlamentar
+  - requerimento
 
 AudienciaPublicaDetail:
   {% trans 'Audiência Pública' %}:
@@ -22,6 +24,8 @@ AudienciaPublicaDetail:
   - upload_pauta upload_ata upload_anexo
   - observacao
   - audiencia_cancelada
+  - parlamentar
+  - requerimento
 
 AnexoAudienciaPublica:
   {% trans 'Documento Acessório' %}:

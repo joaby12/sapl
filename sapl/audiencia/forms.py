@@ -5,8 +5,8 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction
 from django.utils.translation import ugettext_lazy as _
 
+from sapl.parlamentares.models import Parlamentar
 from crispy_forms.layout import Button, Column, Fieldset, HTML, Layout
-
 from sapl.audiencia.models import AudienciaPublica, TipoAudienciaPublica, AnexoAudienciaPublica
 from sapl.crispy_layout_mixin import form_actions, SaplFormHelper, SaplFormLayout, to_row
 from sapl.materia.models import MateriaLegislativa, TipoMateriaLegislativa
@@ -38,6 +38,15 @@ class AudienciaForm(FileFieldCheckMixin, forms.ModelForm):
                                      widget=forms.HiddenInput(),
                                      queryset=MateriaLegislativa.objects.all())
 
+    parlamentar = forms.ModelChoiceField(required=False,
+                                         queryset=Parlamentar.objects.all(),
+                                         label='Autor da Audiência Pública')
+
+    requerimento = forms.ModelChoiceField(required=False,
+                                          queryset=MateriaLegislativa.objects.filter(tipo__descricao='Requerimento'),
+                                          label='Requerimento da Audiência Pública')
+
+
     class Meta:
         model = AudienciaPublica
         fields = ['tipo', 'numero', 'nome',
@@ -45,7 +54,7 @@ class AudienciaForm(FileFieldCheckMixin, forms.ModelForm):
                   'observacao', 'audiencia_cancelada', 'url_audio',
                   'url_video', 'upload_pauta', 'upload_ata',
                   'upload_anexo', 'tipo_materia', 'numero_materia',
-                  'ano_materia', 'materia']
+                  'ano_materia', 'materia', 'parlamentar', 'requerimento']
 
 
     def __init__(self, **kwargs):

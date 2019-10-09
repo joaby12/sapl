@@ -4,7 +4,7 @@ from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from model_utils import Choices
 from sapl.materia.models import MateriaLegislativa
-from sapl.parlamentares.models import (CargoMesa, Parlamentar)
+from sapl.parlamentares.models import Parlamentar
 
 from sapl.utils import (YES_NO_CHOICES, SaplGenericRelation,
                         restringe_tipos_de_arquivo_txt, texto_upload_path,
@@ -109,6 +109,17 @@ class AudienciaPublica(models.Model):
         upload_to=anexo_upload_path,
         storage=OverwriteStorage(),
         verbose_name=_('Anexo da Audiência Pública'))
+    parlamentar = models.ForeignKey(Parlamentar,
+                              null=True,
+                              blank=True,
+                              on_delete=models.PROTECT,
+                              verbose_name=_('Autor da Audiência Pública'))
+    requerimento = models.ForeignKey(MateriaLegislativa,
+                                    null=True,
+                                    blank=True,
+                                    on_delete=models.PROTECT,
+                                    verbose_name=_('Requerimento da Audiência Pública'),
+                                    related_name=_('requerimento'))
 
     class Meta:
         verbose_name = _('Audiência Pública')

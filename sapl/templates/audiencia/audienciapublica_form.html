@@ -1,0 +1,35 @@
+
+{% extends "crud/form.html" %}
+{% load i18n %}
+{% load crispy_forms_tags %}
+{% load common_tags %}
+
+{% block extra_js %}
+
+<script language="Javascript">
+
+  $(document).ready(function() {
+    $("#id_requerimento option").remove()
+    $("#id_parlamentar").change(function() {
+      $("#id_requerimento option").remove()
+      var id_parlamentar = $("#id_parlamentar").val();
+      console.log(id_parlamentar)
+      json_data = {parlamentar_id: id_parlamentar}
+      $.getJSON("/audiencia/busca_requerimento_por_parlamentar/", json_data, function(data){
+          if (data) {
+            console.log(data.result)
+            $.each(data.result, function(idx, obj) {
+              console.log(obj.requerimento_id)
+              console.log(obj.requerimento_text)
+              $("#id_requerimento")
+                .append($("<option></option>")
+                .attr("value", obj.requerimento_id)
+                .text(obj.requerimento_text));
+            });
+          }
+        });
+      });
+    });
+</script>
+
+{% endblock %}
