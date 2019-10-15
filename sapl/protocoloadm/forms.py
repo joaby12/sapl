@@ -335,7 +335,7 @@ class AnularProtocoloAdmForm(ModelForm):
             *args, **kwargs)
 
 
-class ProtocoloDocumentForm(ModelForm):
+class ProtocoloDocumentoForm(ModelForm):
 
     tipo_protocolo = forms.ChoiceField(required=True,
                                        label=_('Tipo de Protocolo'),
@@ -437,7 +437,7 @@ class ProtocoloDocumentForm(ModelForm):
                      form_actions(label=_('Protocolar Documento'))
                      )
         )
-        super(ProtocoloDocumentForm, self).__init__(
+        super(ProtocoloDocumentoForm, self).__init__(
             *args, **kwargs)
 
         if not config.protocolo_manual:
