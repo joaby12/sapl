@@ -11,7 +11,7 @@ import sapl.utils
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('materia', '0063_auto_20191010_1228'),
+        ('materia', '0064_remove_tramitacao_turno'),
         ('audiencia', '0012_audienciapublica_parlamentar'),
     ]
 
@@ -34,16 +34,21 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='audienciapublica',
             name='upload_anexo',
-            field=models.FileField(blank=True, max_length=200, null=True, storage=sapl.utils.OverwriteStorage(), upload_to=sapl.audiencia.models.anexo_upload_path, verbose_name='Anexo da Audiência Pública'),
+            field=models.FileField(blank=True, max_length=300, null=True, storage=sapl.utils.OverwriteStorage(), upload_to=sapl.audiencia.models.anexo_upload_path, verbose_name='Anexo da Audiência Pública'),
         ),
         migrations.AlterField(
             model_name='audienciapublica',
             name='upload_ata',
-            field=models.FileField(blank=True, max_length=200, null=True, storage=sapl.utils.OverwriteStorage(), upload_to=sapl.audiencia.models.ata_upload_path, validators=[sapl.utils.restringe_tipos_de_arquivo_txt], verbose_name='Ata da Audiência Pública'),
+            field=models.FileField(blank=True, max_length=300, null=True, storage=sapl.utils.OverwriteStorage(), upload_to=sapl.audiencia.models.ata_upload_path, validators=[sapl.utils.restringe_tipos_de_arquivo_txt], verbose_name='Ata da Audiência Pública'),
         ),
         migrations.AlterField(
             model_name='audienciapublica',
             name='upload_pauta',
-            field=models.FileField(blank=True, max_length=200, null=True, storage=sapl.utils.OverwriteStorage(), upload_to=sapl.audiencia.models.pauta_upload_path, validators=[sapl.utils.restringe_tipos_de_arquivo_txt], verbose_name='Pauta da Audiência Pública'),
+            field=models.FileField(blank=True, max_length=300, null=True, storage=sapl.utils.OverwriteStorage(), upload_to=sapl.audiencia.models.pauta_upload_path, validators=[sapl.utils.restringe_tipos_de_arquivo_txt], verbose_name='Pauta da Audiência Pública'),
+        ),
+        migrations.AlterField(
+            model_name='anexoaudienciapublica',
+            name='arquivo',
+            field=models.FileField(max_length=300, storage=sapl.utils.OverwriteStorage(), upload_to=sapl.utils.texto_upload_path, verbose_name='Arquivo'),
         ),
     ]
