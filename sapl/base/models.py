@@ -218,7 +218,8 @@ class TipoAutor(models.Model):
     content_type = models.OneToOneField(
         ContentType,
         null=True, default=None,
-        verbose_name=_('Modelagem no SAPL'))
+        verbose_name=_('Modelagem no SAPL'),
+        on_delete=models.PROTECT)
 
     class Meta:
         ordering = ['descricao']
@@ -241,7 +242,8 @@ class Autor(models.Model):
 
     content_type = models.ForeignKey(
         ContentType,
-        blank=True, null=True, default=None)
+        blank=True, null=True, default=None,
+        on_delete=models.PROTECT)
     object_id = models.PositiveIntegerField(
         blank=True, null=True, default=None)
     autor_related = GenericForeignKey('content_type', 'object_id')

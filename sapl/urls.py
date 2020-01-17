@@ -17,6 +17,7 @@ from django.conf import settings
 from django.conf.urls import include, url
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.urls import path
 from django.views.generic.base import RedirectView, TemplateView
 from django.views.static import serve as view_static_server
 
@@ -39,30 +40,30 @@ urlpatterns = [
     url(r'^$', TemplateView.as_view(template_name='index.html'),
         name='sapl_index'),
     url(r'^message$', TemplateView.as_view(template_name='base.html')),
-    url(r'^admin/', include(admin.site.urls)),
+    path(r'^admin/', include(admin.site.urls)),
 
-    url(r'', include(sapl.comissoes.urls)),
-    url(r'', include(sapl.sessao.urls)),
-    url(r'', include(sapl.parlamentares.urls)),
-    url(r'', include(sapl.materia.urls)),
-    url(r'', include(sapl.norma.urls)),
-    url(r'', include(sapl.lexml.urls)),
-    url(r'', include(sapl.painel.urls)),
-    url(r'', include(sapl.protocoloadm.urls)),
-    url(r'', include(sapl.compilacao.urls)),
-    url(r'', include(sapl.relatorios.urls)),
-    url(r'', include(sapl.audiencia.urls)),
+    path(r'', include(sapl.comissoes.urls)),
+    path(r'', include(sapl.sessao.urls)),
+    path(r'', include(sapl.parlamentares.urls)),
+    path(r'', include(sapl.materia.urls)),
+    path(r'', include(sapl.norma.urls)),
+    path(r'', include(sapl.lexml.urls)),
+    path(r'', include(sapl.painel.urls)),
+    path(r'', include(sapl.protocoloadm.urls)),
+    path(r'', include(sapl.compilacao.urls)),
+    path(r'', include(sapl.relatorios.urls)),
+    path(r'', include(sapl.audiencia.urls)),
 
     # must come at the end
     #   so that base /sistema/ url doesn't capture its children
-    url(r'', include(sapl.base.urls)),
+    path(r'', include(sapl.base.urls)),
 
-    url(r'', include(sapl.api.urls)),
+    path(r'', include(sapl.api.urls)),
 
     url(r'^favicon\.ico$', RedirectView.as_view(
         url='/static/sapl/img/favicon.ico', permanent=True)),
 
-    url(r'', include(sapl.redireciona_urls.urls)),
+    path(r'', include(sapl.redireciona_urls.urls)),
 ]
 
 

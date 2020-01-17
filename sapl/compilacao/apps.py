@@ -3,7 +3,7 @@ from django import apps
 from django.conf import settings
 from django.db import connection, models
 from django.db.utils import DEFAULT_DB_ALIAS, IntegrityError
-from django.utils.translation import string_concat
+from django.utils.text import format_lazy
 from django.utils.translation import ugettext_lazy as _
 
 
@@ -38,7 +38,7 @@ class AppConfig(apps.AppConfig):
                     except IntegrityError as e:
                         if not settings.DEBUG:
                             print(
-                                string_concat(
+                                format_lazy(
                                     _('Ocorreu erro na importação: '),
                                     line,
                                     str(e)))
@@ -72,7 +72,7 @@ class AppConfig(apps.AppConfig):
                 tipo.save()
             except IntegrityError as e:
                 if not settings.DEBUG:
-                    print(string_concat(
+                    print(format_lazy(
                         _('Ocorreu erro na criação tipo de ta: '),
                         str(e)))
 
@@ -86,7 +86,7 @@ def init_compilacao_base(app_config, verbosity=2, interactive=True,
     if not TipoDispositivo.objects.exists():
 
         print('')
-        print(string_concat('\033[93m\033[1m',
+        print(format_lazy('\033[93m\033[1m',
                             _('Iniciando Textos Articulados...'),
                             '\033[0m'))
         AppConfig.import_pattern()

@@ -1,5 +1,5 @@
 import pytest
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from model_mommy import mommy
 
 from sapl.crud.base import (CrispyLayoutFormMixin, CrudListView, from_to,

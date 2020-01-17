@@ -756,7 +756,8 @@ class Proposicao(models.Model):
                               null=True,
                               blank=True,
                               on_delete=models.PROTECT)
-    tipo = models.ForeignKey(TipoProposicao, on_delete=models.PROTECT,
+    tipo = models.ForeignKey(TipoProposicao,
+                             on_delete=models.PROTECT,
                              blank=False,
                              null=True,
                              verbose_name=_('Tipo'))
@@ -831,7 +832,7 @@ class Proposicao(models.Model):
 
     content_type = models.ForeignKey(
         ContentType, default=None, blank=True, null=True,
-        verbose_name=_('Tipo de Material Gerado'))
+        on_delete=models.PROTECT, verbose_name=_('Tipo de Material Gerado'))
     object_id = models.PositiveIntegerField(
         blank=True, null=True, default=None)
     conteudo_gerado_related = SaplGenericForeignKey(

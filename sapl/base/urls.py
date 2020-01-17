@@ -1,11 +1,13 @@
 import os
 
-from django.conf.urls import include, url
+from django.conf.urls import url, include
 from django.contrib.auth import views
 from django.contrib.auth.decorators import permission_required
-from django.contrib.auth.views import (password_reset, password_reset_complete,
-                                       password_reset_confirm,
-                                       password_reset_done)
+from django.contrib.auth.views import (PasswordResetView,
+                                       PasswordResetCompleteView,
+                                       PasswordResetDoneView,
+                                       PasswordResetConfirmView)
+from django.urls import path, reverse_lazy
 from django.views.generic.base import RedirectView, TemplateView
 
 from sapl.base.views import AutorCrud, ConfirmarEmailView, TipoAutorCrud, get_estatistica
@@ -53,53 +55,52 @@ alterar_senha = [
     url(r'^sistema/alterar-senha/$',
         AlterarSenha.as_view(),
         name='alterar_senha'),
-
 ]
 
 recuperar_senha = [
     url(r'^recuperar-senha/email/$',
-        password_reset,
-        {'post_reset_redirect': 'sapl.base:recuperar_senha_finalizado',
-         'email_template_name': 'base/recuperar_senha_email.html',
-         'html_email_template_name': 'base/recuperar_senha_email.html',
-         'template_name': 'base/recuperar_senha_email_form.html',
-         'from_email': EMAIL_SEND_USER,
-         'password_reset_form': RecuperarSenhaForm},
+        PasswordResetView.as_view(
+         success_url=reverse_lazy('sapl.base:recuperar_senha_finalizado'),
+         email_template_name='base/recuperar_senha_email.html',
+         html_email_template_name='base/recuperar_senha_email.html',
+         template_name='base/recuperar_senha_email_form.html',
+         from_email=EMAIL_SEND_USER,
+         form_class=RecuperarSenhaForm),
         name='recuperar_senha_email'),
 
     url(r'^recuperar-senha/finalizado/$',
-        password_reset_done,
-        {'template_name': 'base/recupera_senha_email_enviado.html'},
+        PasswordResetDoneView.as_view(
+            template_name='base/recupera_senha_email_enviado.html'),
         name='recuperar_senha_finalizado'),
 
     url(r'^recuperar-senha/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>.+)/$',
-        password_reset_confirm,
-        {'post_reset_redirect': 'sapl.base:recuperar_senha_completo',
-         'template_name': 'base/nova_senha_form.html',
-         'set_password_form': NovaSenhaForm},
+        PasswordResetConfirmView.as_view(
+          success_url=reverse_lazy('sapl.base:recuperar_senha_completo'),
+          template_name='base/nova_senha_form.html',
+          form_class=NovaSenhaForm),
         name='recuperar_senha_confirma'),
 
     url(r'^recuperar-senha/completo/$',
-        password_reset_complete,
-        {'template_name': 'base/recuperar_senha_completo.html'},
+        PasswordResetCompleteView.as_view(
+            template_name='base/recuperar_senha_completo.html'),
         name='recuperar_senha_completo'),
 ]
 
 
 urlpatterns = [
-    url(r'^sistema/autor/tipo/', include(TipoAutorCrud.get_urls())),
-    url(r'^sistema/autor/', include(AutorCrud.get_urls())),
+    path(r'^sistema/autor/tipo/', include(TipoAutorCrud.get_urls()),
+    path(r'^sistema/autor/', include(AutorCrud.get_urls()),
 
     url(r'^sistema/ajuda/(?P<topic>\w+)$',
         HelpTopicView.as_view(), name='help_topic'),
     url(r'^sistema/ajuda/$', TemplateView.as_view(template_name='ajuda.html'),
         name='help'),
-    url(r'^sistema/casa-legislativa/', include(CasaLegislativaCrud.get_urls()),
+    path(r'^sistema/casa-legislativa/', include(CasaLegislativaCrud.get_urls()),
         name="casa_legislativa"),
-    url(r'^sistema/app-config/', include(AppConfigCrud.get_urls())),
+    path(r'^sistema/app-config/', include(AppConfigCrud.get_urls())),
 
     # TODO mover estas telas para a app 'relatorios'
-    url(r'^sistema/relatorios/$', 
+    url(r'^sistema/relatorios/$',
         RelatoriosListView.as_view(), name='relatorios_list'),
     url(r'^sistema/relatorios/materia-por-autor$',
         RelatorioMateriasPorAutorView.as_view(), name='materia_por_autor'),
@@ -200,10 +201,10 @@ urlpatterns = [
         (TemplateView.as_view(template_name='sistema.html')),
         name='sistema'),
 
-    url(r'^login/$', views.login, {
-        'template_name': 'base/login.html', 'authentication_form': LoginForm},
+    url(r'^login/$', views.LoginView.as_view(template_name='base/login.html',
+                                             form_class=LoginForm),
         name='login'),
-    url(r'^logout/$', views.logout, {'next_page': '/login'}, name='logout'),
+    url(r'^logout/$', views.LogoutView(next_page='/login'), name='logout'),
 
     url(r'^sistema/search/', SaplSearchView(), name='haystack_search'),
 
@@ -214,6 +215,5 @@ urlpatterns = [
     # url do logotipo usada em documentos migrados do sapl 2.5
     url(r'^(sapl/)?sapl_documentos/props_sapl/logo_casa',
         LogotipoView.as_view(), name='logotipo'),
-
 
 ] + recuperar_senha + alterar_senha + admin_user

@@ -1,7 +1,7 @@
 import pytest
 from model_mommy import mommy
 import datetime
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.utils.translation import ugettext_lazy as _
 from model_mommy import mommy
 
